@@ -69,6 +69,8 @@ item than they left with triggers a "suspected" alert; nobody is punished for th
 - **Stackable items (diamonds, iron, food) cannot be un-duped after the fact.** They cannot carry
   serials, because different serials would stop them stacking. They are protected by the guards,
   by being inside a tracked shulker box, and by the "suspected" alert.
+- **Dupes made before installing** cannot be detected: those copies get different serials when
+  AntiDupe first sees them.
 - **New dupe methods.** Any dupe of an unstackable item is caught. A brand-new dupe of loose
   stackables may get through; the suspected alerts and logs are how you will find it.
 - **Plugins that copy items.** Kit, shop or GUI plugins that hand out copies of a *saved* item

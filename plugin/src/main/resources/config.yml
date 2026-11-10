@@ -17,8 +17,23 @@ offence-expiry-days: 30
 # Removed items are kept this long so /antidupe restore can give them back.
 quarantine-retention-days: 30
 
-# Unstackable items that should NOT get a serial (Minecraft names, for example "minecraft:trident").
-excluded-items: []
+# Unstackable items that should NOT get a serial (Minecraft names). These defaults are everyday
+# items that get used up constantly; tracking them would only grow the database.
+excluded-items:
+  - minecraft:water_bucket
+  - minecraft:lava_bucket
+  - minecraft:milk_bucket
+  - minecraft:powder_snow_bucket
+  - minecraft:cod_bucket
+  - minecraft:salmon_bucket
+  - minecraft:pufferfish_bucket
+  - minecraft:tropical_fish_bucket
+  - minecraft:axolotl_bucket
+  - minecraft:tadpole_bucket
+  - minecraft:mushroom_stew
+  - minecraft:rabbit_stew
+  - minecraft:beetroot_soup
+  - minecraft:suspicious_stew
 
 # Refuse a second login with the same name while that player is online, instead of kicking the
 # first connection. Kicking mid-save is a common relog dupe.

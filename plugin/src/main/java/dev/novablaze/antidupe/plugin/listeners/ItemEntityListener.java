@@ -14,7 +14,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityRemoveEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerItemBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -74,6 +76,17 @@ public final class ItemEntityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBreak(PlayerItemBreakEvent e) {
         forget(e.getBrokenItem());
+    }
+
+    /** Potions drunk and food eaten are gone. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onConsume(PlayerItemConsumeEvent e) {
+        forget(e.getItem());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent e) {
+        forget(e.getPlayer().getInventory().getItem(e.getHand()));
     }
 
     private void forget(ItemStack item) {
