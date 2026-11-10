@@ -123,8 +123,8 @@ class StorageTest {
         try (Storage s = open()) {
             PunishmentLadder ladder = new PunishmentLadder(PunishmentLadder.defaultSteps(),
                     PunishmentLadder.DEFAULT_EXPIRY, s, java.time.Clock.systemUTC());
-            assertEquals(new Action.Warn(), ladder.punish("Steve"));
-            assertEquals(new Action.Kick(), ladder.punish("steve"));
+            assertEquals(java.util.Optional.of(new Action.Warn()), ladder.punish("Steve"));
+            assertEquals(1, s.offences("steve").size());
         }
     }
 }

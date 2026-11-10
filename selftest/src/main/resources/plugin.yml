@@ -1,0 +1,5 @@
+name: AntiDupeSelfTest
+version: '1'
+main: dev.novablaze.antidupe.selftest.SelfTestPlugin
+api-version: '26.3'
+depend: [AntiDupe]

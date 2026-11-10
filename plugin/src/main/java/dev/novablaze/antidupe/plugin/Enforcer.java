@@ -26,13 +26,20 @@ public final class Enforcer {
     private final Storage storage;
     private final Supplier<Settings> settings;
     private final Supplier<PunishmentLadder> ladder;
+    private final Instant punishmentsPausedUntil;
 
+    /**
+     * @param punishmentsPausedUntil after a crash, chunks and player data may have been saved at
+     *     different moments, which duplicates items with nobody to blame. Until this time copies
+     *     are still removed but nobody is punished.
+     */
     public Enforcer(Plugin plugin, Storage storage, Supplier<Settings> settings,
-            Supplier<PunishmentLadder> ladder) {
+            Supplier<PunishmentLadder> ladder, Instant punishmentsPausedUntil) {
         this.plugin = plugin;
         this.storage = storage;
         this.settings = settings;
         this.ladder = ladder;
+        this.punishmentsPausedUntil = punishmentsPausedUntil;
     }
 
     /**
@@ -64,7 +71,12 @@ public final class Enforcer {
         remove.run();
 
         Player offender = culprit == null ? null : Bukkit.getPlayerExact(culprit);
-        boolean punish = culprit != null && (offender == null || !offender.hasPermission("antidupe.bypass"));
+        boolean paused = Instant.now().isBefore(punishmentsPausedUntil);
+        if (paused && culprit != null) {
+            plugin.getLogger().warning("Not punishing " + culprit + ": the server is recovering from a crash.");
+        }
+        boolean punish = culprit != null && !paused
+                && (offender == null || !offender.hasPermission("antidupe.bypass"));
         if (!punish) {
             Holders.player(at).filter(p -> at.kind() == Holder.Kind.PLAYER || at.kind() == Holder.Kind.ENDER_CHEST)
                     .ifPresent(p -> p.sendMessage(msg(s.messages().innocent(),
@@ -74,9 +86,10 @@ public final class Enforcer {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             storage.quarantine(serial, bytes, at, culprit, reason, now);
             if (!punish) return;
-            Action action = ladder.get().punish(culprit);
-            if (action instanceof Action.Ban ban) storage.ban(culprit, now.plus(ban.length()));
-            Bukkit.getScheduler().runTask(plugin, () -> apply(culprit, action, itemName));
+            ladder.get().punish(culprit).ifPresent(action -> {
+                if (action instanceof Action.Ban ban) storage.ban(culprit, now.plus(ban.length()));
+                Bukkit.getScheduler().runTask(plugin, () -> apply(culprit, action, itemName));
+            });
         });
     }
 

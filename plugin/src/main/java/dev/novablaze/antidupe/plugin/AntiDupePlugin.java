@@ -12,7 +12,11 @@ import dev.novablaze.antidupe.plugin.listeners.InventoryListener;
 import dev.novablaze.antidupe.plugin.listeners.ItemEntityListener;
 import dev.novablaze.antidupe.plugin.listeners.SessionListener;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Clock;
 import java.time.Instant;
 import org.bukkit.plugin.PluginManager;
@@ -21,6 +25,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 /** Wires the parts together. Each part is documented in its own file. */
 public final class AntiDupePlugin extends JavaPlugin {
     private static final long SAVE_EVERY_TICKS = 20L * 60;
+    private static final Duration CRASH_GRACE = Duration.ofMinutes(30);
 
     private volatile Settings settings;
     private volatile PunishmentLadder ladder;
@@ -43,9 +48,10 @@ public final class AntiDupePlugin extends JavaPlugin {
         }
         serials = new SerialService(this);
         reloadSettings();
+        Instant pausedUntil = crashCheck();
 
         DupeDetector detector = new DupeDetector(registry, new PaperHolderProbe(serials, registry));
-        Enforcer enforcer = new Enforcer(this, storage, () -> settings, () -> ladder);
+        Enforcer enforcer = new Enforcer(this, storage, () -> settings, () -> ladder, pausedUntil);
         scanner = new Scanner(serials, detector, enforcer);
         SessionListener sessions = new SessionListener(this, storage, scanner, () -> settings);
 
@@ -75,6 +81,37 @@ public final class AntiDupePlugin extends JavaPlugin {
                 + " mode, tracking " + registry.snapshot().size() + " items.");
     }
 
+    private Path runningMarker() {
+        return getDataFolder().toPath().resolve("running.lock");
+    }
+
+    /**
+     * A marker file exists while the server runs and is deleted on a clean stop. If it is still
+     * there on start, the last run crashed: punishments pause for a while.
+     */
+    private Instant crashCheck() {
+        Path marker = runningMarker();
+        boolean crashed = Files.exists(marker);
+        try {
+            Files.writeString(marker, Instant.now().toString());
+        } catch (IOException e) {
+            getLogger().warning("Could not write " + marker + ": " + e.getMessage());
+        }
+        if (!crashed) return Instant.MIN;
+        getLogger().warning("The server did not shut down cleanly last time. Duplicates found in the next "
+                + CRASH_GRACE.toMinutes() + " minutes are removed but nobody is punished.");
+        return Instant.now().plus(CRASH_GRACE);
+    }
+
+    /** For the self-test plugin and other integrations. */
+    public Scanner scanner() { return scanner; }
+
+    public Registry registry() { return registry; }
+
+    public Storage storage() { return storage; }
+
+    public SerialService serials() { return serials; }
+
     private void reloadSettings() {
         settings = Settings.from(getConfig(), getLogger());
         serials.setExcluded(settings.excluded());
@@ -93,6 +130,11 @@ public final class AntiDupePlugin extends JavaPlugin {
     public void onDisable() {
         if (storage == null) return;
         saveRegistry();
+        try {
+            Files.deleteIfExists(runningMarker());
+        } catch (IOException e) {
+            getLogger().warning("Could not delete the running marker: " + e.getMessage());
+        }
         try {
             storage.close();
         } catch (SQLException e) {

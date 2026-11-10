@@ -30,46 +30,85 @@ class PunishmentLadderTest {
                 PunishmentLadder.DEFAULT_EXPIRY, new InMemoryOffenceStore(), clock);
     }
 
+    /** Each call is a separate incident, 1 minute apart. */
+    Action next(String name) {
+        clock.now = clock.now.plus(Duration.ofMinutes(1));
+        return ladder.punish(name).orElseThrow();
+    }
+
     @Test
     void warn_then_kick_then_two_hour_ban_then_ban_again() {
-        assertEquals(new Action.Warn(), ladder.punish("steve"));
-        assertEquals(new Action.Kick(), ladder.punish("steve"));
-        assertEquals(new Action.Ban(Duration.ofHours(2)), ladder.punish("steve"));
-        assertEquals(new Action.Ban(Duration.ofHours(2)), ladder.punish("steve"));
+        assertEquals(new Action.Warn(), next("steve"));
+        assertEquals(new Action.Kick(), next("steve"));
+        assertEquals(new Action.Ban(Duration.ofHours(2)), next("steve"));
+        assertEquals(new Action.Ban(Duration.ofHours(2)), next("steve"));
         assertEquals(4, ladder.activeOffences("steve"));
     }
 
     @Test
     void names_are_case_insensitive() {
-        ladder.punish("Steve");
-        assertEquals(new Action.Kick(), ladder.punish("STEVE"));
+        next("Steve");
+        assertEquals(new Action.Kick(), next("STEVE"));
     }
 
     @Test
     void offence_older_than_thirty_days_is_forgotten() {
-        ladder.punish("steve");
+        next("steve");
         clock.now = clock.now.plus(Duration.ofDays(31));
         assertEquals(0, ladder.activeOffences("steve"));
-        assertEquals(new Action.Warn(), ladder.punish("steve"));
+        assertEquals(new Action.Warn(), next("steve"));
     }
 
     @Test
     void pardon_resets_to_warning() {
-        ladder.punish("steve");
-        ladder.punish("steve");
+        next("steve");
+        next("steve");
         ladder.pardon("steve");
-        assertEquals(new Action.Warn(), ladder.punish("steve"));
+        assertEquals(new Action.Warn(), next("steve"));
     }
 
     @Test
     void players_are_counted_separately() {
-        ladder.punish("steve");
-        assertEquals(new Action.Warn(), ladder.punish("alex"));
+        next("steve");
+        assertEquals(new Action.Warn(), next("alex"));
     }
 
     @Test
     void empty_ladder_is_rejected() {
         assertThrows(IllegalArgumentException.class, () -> new PunishmentLadder(
                 List.of(), Duration.ofDays(30), new InMemoryOffenceStore(), clock));
+    }
+
+    @Test
+    void removals_within_ten_seconds_are_one_offence() {
+        assertEquals(java.util.Optional.of(new Action.Warn()), ladder.punish("steve"));
+        clock.now = clock.now.plusSeconds(3);
+        assertEquals(java.util.Optional.empty(), ladder.punish("steve"), "same incident");
+        assertEquals(1, ladder.activeOffences("steve"));
+        clock.now = clock.now.plusSeconds(11);
+        assertEquals(java.util.Optional.of(new Action.Kick()), ladder.punish("steve"));
+    }
+
+    @Test
+    void simultaneous_removals_from_many_threads_give_one_warning() throws Exception {
+        int threads = 16;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        java.util.List<java.util.concurrent.Future<java.util.Optional<Action>>> results = new java.util.ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            results.add(pool.submit(() -> { go.await(); return ladder.punish("steve"); }));
+        }
+        go.countDown();
+        int actions = 0;
+        for (var r : results) {
+            java.util.Optional<Action> a = r.get();
+            if (a.isPresent()) {
+                actions++;
+                assertEquals(new Action.Warn(), a.get());
+            }
+        }
+        pool.shutdown();
+        assertEquals(1, actions);
+        assertEquals(1, ladder.activeOffences("steve"));
     }
 }

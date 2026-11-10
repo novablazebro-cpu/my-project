@@ -56,7 +56,8 @@ public final class InventoryListener implements Listener {
         addSerial(moved, e.getCursor());
         if (e.getHotbarButton() >= 0) addSerial(moved, p.getInventory().getItem(e.getHotbarButton()));
         if (e.getClick() == ClickType.SWAP_OFFHAND) addSerial(moved, p.getInventory().getItemInOffHand());
-        later(() -> scanPlayerAndTop(p, moved));
+        boolean shared = isShared(e.getView().getTopInventory());
+        later(() -> scanPlayerAndTop(p, moved, shared));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -64,17 +65,27 @@ public final class InventoryListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player p) || !Tracking.tracked(p)) return;
         Set<String> moved = new HashSet<>();
         addSerial(moved, e.getOldCursor());
-        later(() -> scanPlayerAndTop(p, moved));
+        boolean shared = isShared(e.getView().getTopInventory());
+        later(() -> scanPlayerAndTop(p, moved, shared));
+    }
+
+    /**
+     * Two players looking into the same chest: a copy one of them made could be grabbed by the
+     * other, so in that case nobody is blamed (copies are still removed).
+     */
+    private static boolean isShared(Inventory top) {
+        return Holders.of(top).isPresent() && top.getViewers().size() > 1;
     }
 
     /**
      * Only the items the player actually moved are blamed on them. Anything else found wrong in
      * the same inventories is removed without punishing anyone.
      */
-    private void scanPlayerAndTop(Player p, Set<String> moved) {
+    private void scanPlayerAndTop(Player p, Set<String> moved, boolean shared) {
         if (!p.isOnline()) return;
-        String name = p.getName().toLowerCase(Locale.ROOT);
-        scanner.scan(Holder.player(name), p.getInventory(),
+        String name = shared ? null : p.getName().toLowerCase(Locale.ROOT);
+        String holderName = p.getName().toLowerCase(Locale.ROOT);
+        scanner.scan(Holder.player(holderName), p.getInventory(),
                 s -> moved.contains(s) ? name : null, false, moved);
         Inventory top = p.getOpenInventory().getTopInventory();
         Holders.of(top).filter(h -> h.kind() != Holder.Kind.PLAYER).ifPresent(h ->
