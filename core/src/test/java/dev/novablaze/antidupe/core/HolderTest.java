@@ -25,6 +25,7 @@ class HolderTest {
                 Holder.container("world_nether", -5, 64, 10),
                 Holder.placedShulker("world", 0, 70, 0),
                 Holder.ground(UUID.randomUUID()),
+                Holder.entity(UUID.randomUUID()),
                 Holder.inShulker("box-serial"))) {
             assertEquals(h, Holder.decode(h.encode()));
         }

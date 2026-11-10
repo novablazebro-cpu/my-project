@@ -1,0 +1,40 @@
+# AntiDupe settings. After editing, run /antidupe reload.
+
+# enforce: remove proven duplicates and punish.
+# monitor: only log and alert staff, change nothing. Good for the first day on a new server.
+mode: enforce
+
+# What happens on a player's 1st, 2nd, 3rd... offence. The last step repeats.
+# Steps: warn, kick, or ban <length> where length ends in m (minutes), h (hours) or d (days).
+punishments:
+  - warn
+  - kick
+  - ban 2h
+
+# Offences older than this no longer count.
+offence-expiry-days: 30
+
+# Removed items are kept this long so /antidupe restore can give them back.
+quarantine-retention-days: 30
+
+# Unstackable items that should NOT get a serial (Minecraft names, for example "minecraft:trident").
+excluded-items: []
+
+# Refuse a second login with the same name while that player is online, instead of kicking the
+# first connection. Kicking mid-save is a common relog dupe.
+refuse-second-login: true
+
+# Alert staff when a player rejoins with at least this many more of a stackable item than they
+# left with. Never punishes.
+suspect-alert-threshold: 64
+
+# Messages use MiniMessage: https://docs.advntr.dev/minimessage/format.html
+messages:
+  warn: "<red>A duplicated <item> was removed from you. Duplicating items is not allowed: next time you will be kicked.</red>"
+  kick: "<red>Kicked for duplicating items (<item>). Next time you will be banned.</red>"
+  ban: "<red>Banned for <length> for duplicating items (<item>).</red>"
+  banned: "<red>You are banned for duplicating items. Time left: about <length>.</red>"
+  innocent: "<yellow>A <item> you had was a duplicate made by someone else, so it was removed. You are not in trouble.</yellow>"
+  alert: "<gold>[AntiDupe]</gold> <gray>Duplicate <item> by <player> at <where>: <action>.</gray>"
+  second-login: "<red>That name is already online. If it is you, wait a few seconds and try again.</red>"
+  suspect: "<gold>[AntiDupe]</gold> <yellow>Suspected relog dupe: <player> rejoined with <items>. Not proven, nothing was done.</yellow>"

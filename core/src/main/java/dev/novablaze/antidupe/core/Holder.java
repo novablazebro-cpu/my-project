@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 public record Holder(Kind kind, String key) {
 
-    public enum Kind { PLAYER, ENDER_CHEST, CONTAINER, PLACED_SHULKER, GROUND, IN_SHULKER }
+    public enum Kind { PLAYER, ENDER_CHEST, CONTAINER, PLACED_SHULKER, GROUND, ENTITY, IN_SHULKER }
 
     public Holder {
         Objects.requireNonNull(kind, "kind");
@@ -38,6 +38,11 @@ public record Holder(Kind kind, String key) {
 
     public static Holder ground(UUID entityId) {
         return new Holder(Kind.GROUND, entityId.toString());
+    }
+
+    /** A storage entity: donkey, mule, llama, chest minecart, chest boat. */
+    public static Holder entity(UUID entityId) {
+        return new Holder(Kind.ENTITY, entityId.toString());
     }
 
     public static Holder inShulker(String boxSerial) {

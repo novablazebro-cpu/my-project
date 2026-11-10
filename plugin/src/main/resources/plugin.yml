@@ -1,0 +1,16 @@
+name: AntiDupe
+version: '${version}'
+main: dev.novablaze.antidupe.plugin.AntiDupePlugin
+api-version: '26.3'
+description: Gives unstackable items hidden serial numbers and removes proven duplicates.
+softdepend: [AuthMe]
+permissions:
+  antidupe.admin:
+    description: Use /antidupe.
+    default: op
+  antidupe.alerts:
+    description: See duplicate and suspected-dupe alerts.
+    default: op
+  antidupe.bypass:
+    description: Never punished (duplicates are still removed).
+    default: false
