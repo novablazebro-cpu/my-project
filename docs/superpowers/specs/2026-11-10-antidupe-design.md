@@ -154,9 +154,13 @@ Each part has one job and can be tested alone.
 
 ### 11. Build and versions
 
-- Gradle project, Java 25 (required by Paper 26.1 and later), `paper-api` for 26.3.
-- If the 26.3 API is not published under that exact version, build against the newest
-  26.x API available and set `api-version` accordingly. To be confirmed when the build runs.
+- Gradle project, Java 25 (required by Paper 26.1 and later).
+- Target server: Paper 26.3 (confirmed by Nova). Build against `paper-api` 26.3 with
+  `api-version: '26.3'`.
+- Fallback, only if the 26.3 API is not yet published: build against the newest 26.x API
+  and set `api-version` to match. Paper loads plugins built for an older API version on a
+  newer server, so the jar still runs on 26.3. The jar is then tested on a 26.3 test server
+  before release either way.
 - No server internals are used, only the public Paper API, so updates are less likely to break it.
 - AuthMe is an optional dependency: the plugin runs without it and skips the login-gap guard.
 
